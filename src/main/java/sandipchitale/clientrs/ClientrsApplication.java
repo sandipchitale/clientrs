@@ -16,11 +16,13 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtTimestampValidator;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,6 +30,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -93,6 +97,10 @@ public class ClientrsApplication {
 	@Bean
 	@Qualifier("sharedSecretJwtDecoder")
 	public JwtDecoder jwtDecoder(@Value("${jwt.shared-secret-key}") String sharedSecretKey) {
-		return NimbusJwtDecoder.withSecretKey(new SecretKeySpec(sharedSecretKey.getBytes(StandardCharsets.UTF_8), "HmacSHA256")).build();
+		NimbusJwtDecoder nimbusJwtDecoder = NimbusJwtDecoder.withSecretKey(new SecretKeySpec(sharedSecretKey.getBytes(StandardCharsets.UTF_8), "HmacSHA256")).build();
+		nimbusJwtDecoder.setJwtValidator(
+				new DelegatingOAuth2TokenValidator<>(
+						new JwtTimestampValidator(Duration.of(30, ChronoUnit.SECONDS)))); // 30 seconds clock skew
+		return nimbusJwtDecoder;
 	}
 }
