@@ -6,6 +6,9 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AuthorizeHttpRequestsConfigurer;
+import org.springframework.security.config.annotation.web.configurers.oauth2.client.OAuth2LoginConfigurer;
+import org.springframework.security.config.annotation.web.configurers.oauth2.server.resource.OAuth2ResourceServerConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
@@ -51,19 +54,23 @@ public class ClientrsApplication {
 										   ClientRegistrationRepository clientRegistrationRepository,
 										   @Qualifier("sharedSecretJwtDecoder") JwtDecoder jwtDecoder) throws Exception {
 		httpSecurity
-				.authorizeHttpRequests(authorizationManagerRequestMatcherRegistry -> {
+				.authorizeHttpRequests((AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry authorizationManagerRequestMatcherRegistry) -> {
 					authorizationManagerRequestMatcherRegistry
 							.anyRequest().authenticated();
 				})
-				.oauth2Login(httpSecurityOAuth2LoginConfigurer -> {
+				.oauth2Login((OAuth2LoginConfigurer<HttpSecurity> httpSecurityOAuth2LoginConfigurer) -> {
 					httpSecurityOAuth2LoginConfigurer.clientRegistrationRepository(clientRegistrationRepository);
 					httpSecurityOAuth2LoginConfigurer.userInfoEndpoint(userInfoEndpointConfig -> {
 						userInfoEndpointConfig.userService(oauth2UserService(jwtDecoder));
 					});
 				})
-				.oauth2ResourceServer(oauth2 -> oauth2
-						.jwt(jwt -> jwt.decoder(jwtDecoder)
-						)
+				.oauth2ResourceServer((OAuth2ResourceServerConfigurer<HttpSecurity> oauth2) -> {
+							oauth2
+									.jwt((OAuth2ResourceServerConfigurer<HttpSecurity>.JwtConfigurer jwt) -> {
+												jwt.decoder(jwtDecoder);
+											}
+									);
+						}
 				);
 		return httpSecurity.build();
 	}
