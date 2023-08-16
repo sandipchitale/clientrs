@@ -61,13 +61,15 @@ public class ClientrsApplication {
 				.oauth2Login((OAuth2LoginConfigurer<HttpSecurity> httpSecurityOAuth2LoginConfigurer) -> {
 					httpSecurityOAuth2LoginConfigurer.clientRegistrationRepository(clientRegistrationRepository);
 					httpSecurityOAuth2LoginConfigurer.userInfoEndpoint(userInfoEndpointConfig -> {
+						// This is to avoid user-info endpoint call
 						userInfoEndpointConfig.userService(oauth2UserService(jwtDecoder));
 					});
 				})
 				.oauth2ResourceServer((OAuth2ResourceServerConfigurer<HttpSecurity> oauth2) -> {
 							oauth2
 									.jwt((OAuth2ResourceServerConfigurer<HttpSecurity>.JwtConfigurer jwt) -> {
-												jwt.decoder(jwtDecoder);
+												// Use JWT decoder based on shared secret key to validate JWT tokens
+ 												jwt.decoder(jwtDecoder);
 											}
 									);
 						}
@@ -75,6 +77,7 @@ public class ClientrsApplication {
 		return httpSecurity.build();
 	}
 
+	// This is to avoid user-info endpoint call and instead build OAuth2User from JWT token
 	private OAuth2UserService<OAuth2UserRequest, OAuth2User> oauth2UserService(JwtDecoder jwtDecoder) {
 		return new DefaultOAuth2UserService() {
 			@Override
