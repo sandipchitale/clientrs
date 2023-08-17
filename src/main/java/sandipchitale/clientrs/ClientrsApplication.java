@@ -9,7 +9,6 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AuthorizeHttpRequestsConfigurer;
 import org.springframework.security.config.annotation.web.configurers.oauth2.client.OAuth2LoginConfigurer;
 import org.springframework.security.config.annotation.web.configurers.oauth2.server.resource.OAuth2ResourceServerConfigurer;
-import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
@@ -51,7 +50,7 @@ public class ClientrsApplication {
 	        return "Hello " + ((OAuth2AuthenticationToken)authentication).getPrincipal().getAttribute("jwt") + "!";
 	    }
 	}
-	
+
 
 	@Bean
 	public SecurityFilterChain filterChain(HttpSecurity httpSecurity,
@@ -70,14 +69,12 @@ public class ClientrsApplication {
 					});
 				})
 				.oauth2ResourceServer((OAuth2ResourceServerConfigurer<HttpSecurity> oauth2) -> {
-							oauth2
-									.jwt((OAuth2ResourceServerConfigurer<HttpSecurity>.JwtConfigurer jwt) -> {
-												// Use JWT decoder based on shared secret key to validate JWT tokens
- 												jwt.decoder(jwtDecoder);
-											}
-									);
-						}
-				);
+					oauth2
+							.jwt((OAuth2ResourceServerConfigurer<HttpSecurity>.JwtConfigurer jwt) -> {
+								// Use JWT decoder based on shared secret key to validate JWT tokens
+								jwt.decoder(jwtDecoder);
+							});
+				});
 		return httpSecurity.build();
 	}
 
