@@ -5,16 +5,19 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import org.springframework.security.config.annotation.ObjectPostProcessor;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AuthorizeHttpRequestsConfigurer;
 import org.springframework.security.config.annotation.web.configurers.oauth2.client.OAuth2LoginConfigurer;
 import org.springframework.security.config.annotation.web.configurers.oauth2.server.resource.OAuth2ResourceServerConfigurer;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
+import org.springframework.security.oauth2.client.authentication.OAuth2LoginAuthenticationToken;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
+import org.springframework.security.oauth2.client.web.OAuth2LoginAuthenticationFilter;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames;
@@ -60,6 +63,20 @@ public class ClientrsApplication {
 	public SecurityFilterChain filterChain(HttpSecurity httpSecurity,
 										   ClientRegistrationRepository clientRegistrationRepository,
 										   @Qualifier("sharedSecretJwtDecoder") JwtDecoder jwtDecoder) throws Exception {
+
+		ObjectPostProcessor<OAuth2LoginAuthenticationFilter> oAuth2LoginAuthenticationFilterPostProcessor = new ObjectPostProcessor<>() {
+			@Override
+			public <O extends OAuth2LoginAuthenticationFilter> O postProcess(O oAuth2LoginAuthenticationFilter) {
+				oAuth2LoginAuthenticationFilter.setAuthenticationResultConverter(this::createAuthenticationResult);
+				return oAuth2LoginAuthenticationFilter;
+			}
+
+			private OAuth2AuthenticationToken createAuthenticationResult(OAuth2LoginAuthenticationToken authenticationResult) {
+				return new OAuth2AuthenticationToken(authenticationResult.getPrincipal(), authenticationResult.getAuthorities(),
+						authenticationResult.getClientRegistration().getRegistrationId());
+			}
+		};
+
 		httpSecurity
 				.authorizeHttpRequests((AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry authorizationManagerRequestMatcherRegistry) -> {
 					authorizationManagerRequestMatcherRegistry
@@ -71,6 +88,7 @@ public class ClientrsApplication {
 						// This is to avoid user-info endpoint call
 						userInfoEndpointConfig.userService(oauth2UserService(jwtDecoder));
 					});
+					httpSecurityOAuth2LoginConfigurer.withObjectPostProcessor(oAuth2LoginAuthenticationFilterPostProcessor);
 				})
 				.oauth2ResourceServer((OAuth2ResourceServerConfigurer<HttpSecurity> oauth2) -> {
 					oauth2
