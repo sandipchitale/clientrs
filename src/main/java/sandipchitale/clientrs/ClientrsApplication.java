@@ -17,6 +17,7 @@ import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -47,10 +48,13 @@ public class ClientrsApplication {
 	    
 	    @GetMapping("/")
 	    public String index(Authentication authentication) {
-	        return "Hello " + ((OAuth2AuthenticationToken)authentication).getPrincipal().getAttribute("jwt") + "!";
+	        return "User: "
+					+ ((OAuth2AuthenticationToken)authentication).getPrincipal().getAttribute("sub")
+					+ " Access token: "
+					+ ((OAuth2AuthenticationToken)authentication).getPrincipal().getAttribute(OAuth2ParameterNames.ACCESS_TOKEN)
+					+ "!";
 	    }
 	}
-
 
 	@Bean
 	public SecurityFilterChain filterChain(HttpSecurity httpSecurity,
@@ -83,9 +87,9 @@ public class ClientrsApplication {
 		return new DefaultOAuth2UserService() {
 			@Override
 			public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
-				Jwt jwt = jwtDecoder.decode(userRequest.getAccessToken().getTokenValue());
-				Map<String, Object> claims = new HashMap<>(jwt.getClaims());
-				claims.put("jwt", jwt.getTokenValue());
+				Jwt accessTokenJwt = jwtDecoder.decode(userRequest.getAccessToken().getTokenValue());
+				Map<String, Object> claims = new HashMap<>(accessTokenJwt.getClaims());
+				claims.put(OAuth2ParameterNames.ACCESS_TOKEN, accessTokenJwt.getTokenValue());
 				return new DefaultOAuth2User(Collections.emptyList(), claims, "sub");
 			}
 		};
