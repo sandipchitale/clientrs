@@ -35,9 +35,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 @SpringBootApplication
 public class ClientrsApplication {
@@ -55,6 +53,8 @@ public class ClientrsApplication {
 					+ ((OAuth2AuthenticationToken)authentication).getPrincipal().getAttribute("sub")
 					+ " Access token: "
 					+ ((OAuth2AuthenticationToken)authentication).getPrincipal().getAttribute(OAuth2ParameterNames.ACCESS_TOKEN)
+					+ " Refresh token: "
+					+ ((OAuth2AuthenticationToken)authentication).getPrincipal().getAttribute(OAuth2ParameterNames.REFRESH_TOKEN)
 					+ "!";
 	    }
 	}
@@ -72,7 +72,17 @@ public class ClientrsApplication {
 			}
 
 			private OAuth2AuthenticationToken createAuthenticationResult(OAuth2LoginAuthenticationToken authenticationResult) {
-				return new OAuth2AuthenticationToken(authenticationResult.getPrincipal(), authenticationResult.getAuthorities(),
+					OAuth2User principal = authenticationResult.getPrincipal();
+
+				if (principal instanceof DefaultOAuth2User defaultOAuth2User) {
+					Map<String, Object> attributes = new LinkedHashMap<>(defaultOAuth2User.getAttributes());
+					attributes.put(OAuth2ParameterNames.REFRESH_TOKEN, authenticationResult.getRefreshToken().getTokenValue());
+					principal = new DefaultOAuth2User(defaultOAuth2User.getAuthorities(),
+							Collections.unmodifiableMap(attributes),
+							"sub");
+				}
+
+				return new OAuth2AuthenticationToken(principal, authenticationResult.getAuthorities(),
 						authenticationResult.getClientRegistration().getRegistrationId());
 			}
 		};
